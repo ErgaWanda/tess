@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Protocol: LOVE_AZZAHRA_V99</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Share+Tech+Mono&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ------------------------------------------------------------
+           CORE SYSTEM & VARIABLES (SYSTEM CONFIG)
+           ------------------------------------------------------------ */
+        :root {
+            --neon-pink: #ff0055;
+            --neon-blue: #00f2ff;
+            --neon-purple: #bc13fe;
+            --dark-bg: #050011;
+            --glass-bg: rgba(15, 10, 30, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --font-main: 'Share Tech Mono', monospace;
+            --font-header: 'Orbitron', sans-serif;
+            --font-romantic: 'Playfair Display', serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* Mencegah user blok teks biar rapi */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: var(--font-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1500px; /* Untuk efek 3D */
+        }
+
+        /* ------------------------------------------------------------
+           CANVAS LAYERS (BACKGROUND & EFFECTS)
+           ------------------------------------------------------------ */
+        #starfield {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.8;
+        }
+
+        #fireworksCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 9998; /* Di atas segalanya kecuali overlay teks */
+            pointer-events: none;
+        }
+
+        /* ------------------------------------------------------------
+           UI COMPONENT: LOADING SCREEN
+           ------------------------------------------------------------ */
+        .loader-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .scanline {
+            width: 100%; height: 100px;
+            background: linear-gradient(to bottom, transparent, rgba(0, 242, 255, 0.2), transparent);
+            position: absolute;
+            animation: scan 2s linear infinite;
+        }
+
+        .loader-text {
+            color: var(--neon-blue);
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px var(--neon-blue);
+            animation: blink 0.5s infinite alternate;
+        }
+
+        /* ------------------------------------------------------------
+           UI COMPONENT: MAIN CARD (GLASSMORPHISM V3)
+           ------------------------------------------------------------ */
+        .main-card {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 550px;
+            height: auto;
+            min-height: 60vh;
+            max-height: 85vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(188, 19, 254, 0.2);
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out, opacity 0.8s ease;
+            opacity: 0; /* Hidden initially */
+        }
+
+        /* Hiasan Sudut Card (Tech Look) */
+        .corner {
+            position: absolute;
+            width: 20px; height: 20px;
+            border: 2px solid var(--neon-pink);
+            transition: 0.3s;
+        }
+        .tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+        .tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+        .bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+        .br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px dashed rgba(255,255,255,0.2);
+            padding-bottom: 15px;
+            width: 100%;
+        }
+
+        h1 {
+            font-family: var(--font-romantic);
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #fff, #ff80bf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            filter: drop-shadow(0 0 5px rgba(255, 0, 85, 0.5));
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: var(--neon-blue);
+            letter-spacing: 2px;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        /* ------------------------------------------------------------
+           CONTENT SCROLL AREA
+           ------------------------------------------------------------ */
+        .content-area {
+            flex-grow: 1;
+            width: 100%;
+            overflow-y: auto;
+            text-align: justify;
+            text-align-last: center;
+            padding-right: 10px;
+            margin-bottom: 20px;
+            /* Scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-pink) rgba(0,0,0,0.3);
+        }
+
+        .content-area::-webkit-scrollbar { width: 4px; }
+        .content-area::-webkit-scrollbar-thumb { background: var(--neon-pink); border-radius: 10px; }
+
+        .typing-text {
+            font-family: 'Poppins', sans-serif; /* Fallback */
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.9);
+            white-space: pre-line; /* Agar enter terbaca */
+        }
+
+        .highlight {
+            color: var(--neon-blue);
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 242, 255, 0.5);
+        }
+
+        .highlight-pink {
+            color: var(--neon-pink);
+            font-weight: bold;
+            font-family: var(--font-header);
+        }
+
+        /* ------------------------------------------------------------
+           BUTTON SYSTEM
+           ------------------------------------------------------------ */
+        .btn-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: auto;
+        }
+
+        .btn-glitch {
+            position: relative;
+            padding: 15px 40px;
+            background: transparent;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            font-family: var(--font-header);
+            font-size: 1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: 0.3s;
+            box-shadow: 0 0 10px rgba(255,0,85,0.3);
+        }
+
+        .btn-glitch::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: var(--neon-pink);
+            transition: 0.5s;
+            z-index: -1;
+        }
+
+        .btn-glitch:hover {
+            color: #fff;
+            box-shadow: 0 0 30px var(--neon-pink);
+            transform: scale(1.05);
+        }
+
+        .btn-glitch:hover::before {
+            left: 0;
+        }
+
+        /* ------------------------------------------------------------
+           FINAL SURPRISE LAYER (THE "MISSING" PART FIXED)
+           ------------------------------------------------------------ */
+        .surprise-layer {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #000; /* Solid black for contrast */
+            z-index: 9999;
+            display: none; /* Wajib none di awal */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+        }
+
+        .surprise-layer.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .big-love {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 4rem; /* Default mobile */
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            line-height: 1.1;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 10000;
+            /* Neon Glow Effect Ultimate */
+            text-shadow: 
+                0 0 10px #fff,
+                0 0 20px #fff,
+                0 0 40px var(--neon-pink),
+                0 0 80px var(--neon-pink),
+                0 0 120px var(--neon-pink);
+            animation: pulseBeat 0.8s infinite alternate;
+        }
+
+        .dutt-name {
+            font-size: 6rem;
+            display: block;
+            background: linear-gradient(to bottom, #ff00cc, #333399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            -webkit-text-stroke: 2px #fff;
+        }
+
+        .sub-message {
+            margin-top: 20px;
+            font-family: var(--font-main);
+            color: var(--neon-blue);
+            font-size: 1.2rem;
+            letter-spacing: 5px;
+            opacity: 0;
+            animation: fadeInUp 2s forwards 1s;
+        }
+
+        /* ------------------------------------------------------------
+           ANIMATIONS
+           ------------------------------------------------------------ */
+        @keyframes scan { 0% { top: -100px; } 100% { top: 100vh; } }
+        @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0.3; } }
+        @keyframes pulseBeat { from { transform: scale(1); } to { transform: scale(1.05); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Media Query Responsive */
+        @media (min-width: 768px) {
+            .big-love { font-size: 6rem; }
+            .dutt-name { font-size: 9rem; }
+            .main-card { padding: 50px; }
+            h1 { font-size: 3.5rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="loader-overlay" id="loader">
+        <div class="scanline"></div>
+        <div class="loader-text">ACCESSING HEART...</div>
+        <div style="margin-top:10px; font-size: 0.8rem; color: #555;">v.10.2.24 Secure Connection</div>
+    </div>
+
+    <canvas id="starfield"></canvas>
+    <canvas id="fireworksCanvas"></canvas>
+
+    <div class="main-card" id="card">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+
+        <div class="header-section">
+            <h1>Selamat Malam</h1>
+            <div class="subtitle">ENCRYPTED MESSAGE FOR: AZZAHRA</div>
+        </div>
+
+        <div class="content-area">
+            <p class="typing-text" id="typewriter"></p>
+        </div>
+
+        <div class="btn-container">
+            <button class="btn-glitch" onclick="triggerExplosion()">KLIK AKU DONG</button>
+        </div>
+    </div>
+
+    <div class="surprise-layer" id="surprise">
+        <div class="big-love">
+            I LOVE YOU<br>
+            <span class="dutt-name">DUTT</span>
+        </div>
+        <div class="sub-message">FOREVER & ALWAYS</div>
+    </div>
+
+    <script>
+        /* ------------------------------------------------------------
+           JAVASCRIPT CORE LOGIC (NO LIBRARIES)
+           ------------------------------------------------------------ */
+
+        // PESAN PUITIS (EDIT DI SINI JIKA MAU)
+        const rawText = `Hai, Sayang. 
+
+Malam ini aku ingin bicara jujur. Tentang kita, dan tentang "tembok tinggi" di rumahmu.
+
+Aku tahu kamu sering merasa nggak enak karena aturan orang tuamu yang ketat. Kamu takut aku bosan, kamu takut aku lelah menunggu.
+
+Tapi dengarkan ini: <span class="highlight">Strict parents itu bukan penghalang. Mereka adalah Penjaga (Guardian).</span> Mereka menjaga berlian mereka agar tidak diambil oleh sembarang orang.
+
+Dan aku? Aku justru merasa tertantang. Karena sulit bertemu, setiap detiknya jadi <span class="highlight-pink">1000x lebih mahal</span>. Rindu kita punya kualitas yang nggak dimiliki orang lain.
+
+Jadi jangan pernah merasa bersalah menjadi anak baik. Tetaplah patuh. Aku di sini, sabar menunggu di depan gerbang itu. Karena buat aku, kamu *worth it* untuk diperjuangkan.`;
+
+        // --- 1. TYPEWRITER EFFECT ENGINE ---
+        const typeWriterElement = document.getElementById('typewriter');
+        let i = 0;
+        
+        // Fungsi untuk mengetik HTML tag dengan aman
+        function typeWriter() {
+            // Kita cheat dikit: langsung render HTML biar style span terbaca
+            // Tapi kita animate opacity per baris biar smooth
+            typeWriterElement.innerHTML = rawText; 
+            // Ini versi simplenya, kalau mau per huruf codingannya jadi 200 baris lagi
+            // Jadi kita pakai CSS fade-in untuk teksnya.
+            typeWriterElement.style.opacity = 0;
+            let op = 0;
+            let timer = setInterval(function () {
+                if (op >= 1){
+                    clearInterval(timer);
+                }
+                typeWriterElement.style.opacity = op;
+                typeWriterElement.style.filter = `blur(${(1-op)*10}px)`;
+                op += 0.05;
+            }, 50);
+        }
+
+        // --- 2. 3D TILT EFFECT (MOUSE MOVE) ---
+        const card = document.getElementById('card');
+        document.addEventListener('mousemove', (e) => {
+            let xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+            let yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+            card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+
+        // --- 3. BACKGROUND STARFIELD ENGINE ---
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let stars = [];
+
+        function initStars() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            stars = [];
+            for(let j=0; j<300; j++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 2,
+                    speed: Math.random() * 0.5 + 0.1
+                });
+            }
+        }
+
+        function animateStars() {
+            ctx.fillStyle = "#050011";
+            ctx.fillRect(0,0,width,height);
+            ctx.fillStyle = "#fff";
+            stars.forEach(s => {
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+                ctx.fill();
+                s.y -= s.speed;
+                if(s.y < 0) s.y = height;
+            });
+            requestAnimationFrame(animateStars);
+        }
+
+        initStars();
+        animateStars();
+        window.addEventListener('resize', initStars);
+
+        // --- 4. FIREWORKS EXPLOSION ENGINE (THE CLIMAX) ---
+        const fwCanvas = document.getElementById('fireworksCanvas');
+        const fwCtx = fwCanvas.getContext('2d');
+        let particles = [];
+
+        function createExplosion() {
+            fwCanvas.width = window.innerWidth;
+            fwCanvas.height = window.innerHeight;
+            
+            // Buat 300 partikel hati
+            for(let k=0; k<300; k++) {
+                particles.push({
+                    x: width/2,
+                    y: height/2,
+                    vx: (Math.random() - 0.5) * 20, // Kecepatan X meledak
+                    vy: (Math.random() - 0.5) * 20, // Kecepatan Y meledak
+                    life: 150, // Durasi hidup partikel
+                    color: `hsl(${Math.random()*60 + 300}, 100%, 60%)`, // Pink/Purple colors
+                    size: Math.random() * 30 + 10,
+                    text: Math.random() > 0.5 ? '❤️' : '💖'
+                });
+            }
+        }
+
+        function renderFireworks() {
+            fwCtx.clearRect(0,0,width,height);
+            
+            for(let k=0; k<particles.length; k++) {
+                let p = particles[k];
+                fwCtx.font = `${p.size}px Arial`;
+                fwCtx.fillStyle = p.color; // Ini fix bug teks ga muncul (pakai fillStyle)
+                fwCtx.fillText(p.text, p.x, p.y);
+                
+                // Physics
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2; // Gravity
+                p.vx *= 0.96; // Friction
+                p.life--;
+
+                if(p.life <= 0) {
+                    particles.splice(k, 1);
+                    k--;
+                }
+            }
+            if(particles.length > 0) {
+                requestAnimationFrame(renderFireworks);
+            }
+        }
+
+        // --- 5. MASTER TRIGGER FUNCTION (FIXED) ---
+        function triggerExplosion() {
+            // 1. Sembunyikan Kartu dengan efek zoom out
+            card.style.transform = "scale(0.1) rotateX(90deg)";
+            card.style.opacity = "0";
+
+            // 2. Siapkan Surprise Layer
+            const surprise = document.getElementById('surprise');
+            surprise.style.display = 'flex'; // Paksa display flex dulu
+
+            // 3. Delay dikit biar transisi smooth, lalu munculkan
+            setTimeout(() => {
+                card.style.display = 'none'; // Hilangkan kartu dari DOM flow
+                surprise.classList.add('active'); // Trigger opacity 1
+                
+                // 4. Trigger Ledakan
+                createExplosion();
+                renderFireworks();
+                
+                // 5. Spam partikel terus menerus setiap 1 detik
+                setInterval(() => {
+                    createExplosion();
+                }, 2000);
+            }, 500);
+        }
+
+        // --- INIT LOADING ---
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('loader').style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('card').style.opacity = 1;
+                    typeWriter();
+                }, 1000);
+            }, 2000);
+        }
+
+    </script>
+</body>
+</html>
